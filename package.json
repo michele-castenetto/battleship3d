@@ -1,0 +1,26 @@
+{
+  "name": "battleship3d",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node tools/dev/start.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babylonjs": "^4.2.0",
+    "babylonjs-gui": "^4.2.0",
+    "babylonjs-inspector": "^4.2.0",
+    "babylonjs-loaders": "^4.2.0",
+    "babylonjs-materials": "^4.2.0",
+    "babylonjs-serializers": "^4.2.0",
+    "earcut": "^2.2.2"
+  },
+  "devDependencies": {
+    "chalk": "^4.1.1",
+    "open": "^8.2.0",
+    "serve-handler": "^6.1.3"
+  }
+}
