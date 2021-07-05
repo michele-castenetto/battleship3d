@@ -17,11 +17,14 @@
         window.game = game;
 
 
-        var player1 = await game.addPlayer();
-        player1.setColor({r: 200, g: 100});
+        var player1 = await game.addPlayer({
+            name: "player1"
+        });
+        player1.setColor({r: 240, g: 50});
 
 
         var player2 = await game.addPlayer({
+            name: "player2",
             position: new BABYLON.Vector3(3, 0, 0)
         });
         player2.setColor({g: 255, r: 100});

@@ -37,14 +37,18 @@ var E3D = E3D || {};
 
 
         ExplosionAnimation.prototype.init = function(params = {}) {
-            let { position, color } = params;
+            let { position, color, firstColor, secondColor } = params;
             position = position || BABYLON.Vector3.Zero();
-            color = color || {r: 47, g: 112, b: 150, a: 0.3};
+            firstColor = firstColor || color;
+            // firstColor = firstColor || {r: 47, g: 112, b: 150, a: 0.8};
+            firstColor = firstColor || {r: 255, g: 255, b: 255, a: 0.8};
+            secondColor = secondColor || {r: 255, g: 255, b: 255, a: 0.8};
 
             this.dimension = 0.3;
             this.dimensionIncrement = 0.09;
             this.node.position = position;
-            this.color = color;
+            this.firstColor = firstColor;
+            this.secondColor = secondColor;
 
             this.updateGeometry();
 
@@ -74,30 +78,277 @@ var E3D = E3D || {};
             const { dimension } = this;
 
             if (!this.wave) {
+
                 const wave = BABYLON.MeshBuilder.CreateSphere("wave", {
                     diameter: dimension
                 }, scene);
                 wave.parent = geometry;
+                wave.renderingGroupId = 2;
                 this.wave = wave;
 
-                const waveMaterial = engine3d.getEmissiveMaterialRGB(this.color);
+                const waveMaterial = engine3d.getEmissiveMaterialRGB(this.firstColor);
                 wave.material = waveMaterial;
 
             }
 
+
+            // if (!this.wave2) {
+                
+            //     const wave2 = BABYLON.MeshBuilder.CreateSphere("wave2", {
+            //         diameter: dimension + 0.1
+            //     }, scene);
+            //     wave2.parent = geometry;
+            //     this.wave2 = wave2;
+
+            //     const wave2Material = engine3d.getEmissiveMaterialRGB(this.secondColor);
+            //     wave2.material = wave2Material;
+
+            // }
+
+
             engine3d.setMeshScale(this.wave, dimension);
+            // engine3d.setMeshScale(this.wave2, dimension + 0.1);
 
         };
 
         return ExplosionAnimation;
 
     })();
-
-
     E3D.ExplosionAnimation = ExplosionAnimation;
 
 
-    
+
+
+    const WaveEmitter = (function() {
+        
+        function WaveEmitter(game) {
+            const _this = this;
+
+            this.game = game;
+            this.engine3d = game.engine3d;
+            this.scene = this.engine3d.scene;
+
+            this.particleSystem = null;
+            this.emitter = null;
+
+        }
+
+
+        WaveEmitter.prototype.dispose = function() {
+            this.particleSystem.dispose();
+            this.emitter.dispose();
+        };
+
+
+        WaveEmitter.prototype.buildParticleSystem = function(scene, emitter) {
+          
+            var particleSystem = new BABYLON.ParticleSystem("wave", 2000, scene);
+
+            //Texture 
+            particleSystem.particleTexture = new BABYLON.Texture("./assets/textures/smoke.png", scene);
+
+            // Stop duration
+            particleSystem.targetStopDuration = 0.2;
+
+            // Emitter
+            particleSystem.emitter = emitter;
+            var hemisphericEmitter = particleSystem.createHemisphericEmitter();
+            hemisphericEmitter.radiusRange = 0;
+            
+            // Colors 
+            particleSystem.color1 = new BABYLON.Color4(0.7, 0.8, 1.0, 1.0);
+            particleSystem.color2 = new BABYLON.Color4(0.2, 0.5, 1.0, 1.0);
+            particleSystem.colorDead = new BABYLON.Color4(0, 0, 0.2, 0.0);
+
+            // Size of each particle (random between...
+            particleSystem.minSize = 0.1;
+            particleSystem.maxSize = 0.1;
+
+            // Life time range
+            particleSystem.minLifeTime = 0.05;
+            particleSystem.maxLifeTime = 0.15;
+
+            // Emission rate
+            particleSystem.emitRate = 1000;
+
+            // Blend mode
+            particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+
+            // Set the gravity
+            particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
+            // particleSystem.gravity = new BABYLON.Vector3(0, 0, 0);
+
+            // Direction of emission
+            // particleSystem.direction1 = new BABYLON.Vector3(-1, 0, -1);
+            // particleSystem.direction2 = new BABYLON.Vector3(-1, 0, 1);
+
+            // Angular speed
+            particleSystem.minAngularSpeed = 0;
+            particleSystem.maxAngularSpeed = 0;
+
+            // Speed
+            particleSystem.minEmitPower = 5;
+            particleSystem.maxEmitPower = 5;
+            particleSystem.updateSpeed = 0.016666666666666666;
+
+
+            particleSystem.addColorGradient(0, 
+                BABYLON.Color4.FromInts(50, 100, 255, 255), 
+                BABYLON.Color4.FromInts(50, 100, 255, 255) 
+            );
+
+            particleSystem.addColorGradient(0.63, 
+                BABYLON.Color4.FromInts(200, 200, 255, 255), 
+                BABYLON.Color4.FromInts(200, 200, 255, 255)
+            );
+                
+            particleSystem.addColorGradient(1, 
+                BABYLON.Color4.FromInts(255, 255, 255, 255), 
+                BABYLON.Color4.FromInts(255, 255, 255, 255)
+            );
+
+
+            particleSystem.addSizeGradient(0, 0.3, 0.4);
+            particleSystem.addSizeGradient(0.91, 0.4, 0.5);
+            particleSystem.addSizeGradient(1, 1, 1);
+            
+
+            // var updateFunction = function(particles) {
+            //     for (var index = 0; index < particles.length; index++) {
+            //         var particle = particles[index];
+            //         particle.age += this._scaledUpdateSpeed;
+                    
+            //         if (particle.age >= particle.lifeTime) { 
+            //             particles.splice(index, 1);
+            //             this._stockParticles.push(particle);
+            //             index--;
+            //             continue;
+            //         } else {
+            //             particle.colorStep.scaleToRef(this._scaledUpdateSpeed, this._scaledColorStep);
+            //             particle.color.addInPlace(this._scaledColorStep);
+                        
+            //             if (particle.color.a < 0)
+            //             particle.color.a = 0;
+                        
+            //             particle.angle += particle.angularSpeed * this._scaledUpdateSpeed;
+                        
+            //             particle.direction.scaleToRef(this._scaledUpdateSpeed, this._scaledDirection);
+            //             particle.position.addInPlace(this._scaledDirection);
+                        
+            //             this.gravity.scaleToRef(this._scaledUpdateSpeed, this._scaledGravity);
+            //             particle.direction.addInPlace(this._scaledGravity);
+            //         }
+            //     } 
+            // };            
+            // particleSystem.updateFunction = updateFunction;
+
+
+            return particleSystem;
+
+        };
+
+
+        WaveEmitter.prototype.init = function(params = {}) {
+            const _this = this;
+            const { scene } = this;
+
+            const emitter = new BABYLON.TransformNode("wave_emitter", scene); 
+            this.emitter = emitter;
+
+            const particleSystem = this.buildParticleSystem(scene, emitter);
+            this.particleSystem = particleSystem;
+
+            this.particleSystem.onStoppedObservable.add(() => {
+                _this.dispose();
+            });
+
+        };
+
+
+        WaveEmitter.prototype.start = function() {
+            this.particleSystem.start();
+        };
+
+
+        WaveEmitter.prototype.stop = function() {
+            this.particleSystem.stop();
+        };
+
+
+        return WaveEmitter;
+
+
+    })();
+    E3D.WaveEmitter = WaveEmitter;
+
+
+
+
+
+    const GameControllerInput = (function() {
+            
+        function GameControllerInput(game) {
+
+            this.game = game;
+
+            this.engine3d = game.engine3d;
+            this.scene = game.scene;
+
+        }
+
+        GameControllerInput.prototype.init = function() {
+            const _this = this;
+            const { scene } = this;
+
+            scene.onKeyboardObservable.add((kbInfo) => {
+                switch (kbInfo.type) {
+                    case BABYLON.KeyboardEventTypes.KEYDOWN:
+                        _this._onKeyDown(kbInfo.event);
+                        break;
+                    case BABYLON.KeyboardEventTypes.KEYUP:
+                        _this._onKeyUp(kbInfo.event);
+                        break;
+                }
+            });
+
+        };
+
+
+        GameControllerInput.prototype._onKeyDown = function(event) {
+            switch (event.keyCode) {
+            }
+        };
+
+        GameControllerInput.prototype._onKeyUp = function(event) {
+            const { game, engine3d } = this;
+            // console.log("event", event);
+
+            if (event.keyCode === 79 && event.ctrlKey && event.altKey) {
+                game.toggleDebugMode();
+                engine3d.canvasNode.focus();
+            }
+
+            if (event.keyCode === 49) {
+                game.setActiveCamera(game.globalCamera);
+            }
+
+            if (event.keyCode === 50) {
+                game.setActiveCamera(game.currentPlayer.playerCamera);
+            }
+
+        };
+
+
+        return GameControllerInput;
+
+
+    })();
+    E3D.GameControllerInput = GameControllerInput;
+
+
+
+
+
 
 
 
@@ -129,9 +380,73 @@ var E3D = E3D || {};
         Game.WORLD_SIZE = 100;
         Game.SEA_HEIGHT = 5;
         Game.SEA_COLOR = BABYLON.Color3.FromInts(47, 112, 150);
+        Game.SAND_COLOR = BABYLON.Color3.FromInts(252, 221, 190);
         Game.HDR_PATH = "https://BabylonJS.github.io/Assets/environments/umhlanga_sunrise_1k.hdr";
 
         
+        Game.prototype.getAnimations = function() {
+            return this.animations;
+        };
+        Game.prototype.setAnimations = function(animations) {
+            this.animations = animations;
+        };
+
+
+        return Game;
+    
+    })();
+    
+    
+
+    /**
+     * Debug
+     */
+
+    (function() {
+
+
+        Game.prototype.toggleDebugMode = function(active) {
+            if (active === true || active === false) {} else {
+                active = !this.debug;
+            }
+            this.toggleDebugLayer(active);
+            this.debug = active; 
+        };
+        
+
+        Game.prototype.toggleDebugLayer = function(active) {
+            const { scene } = this;
+            if (active === true || active === false) {} else {
+                active = !scene.debugLayer.isVisible();
+            }
+            if (active) {
+                this.scene.debugLayer.show();
+            } else {
+                this.scene.debugLayer.hide();
+            }
+            
+            if (document.querySelector("#scene-explorer-host")) {
+                document.querySelector("#scene-explorer-host").style.zIndex = 10;
+            }
+            if (document.querySelector("#inspector-host")) {
+                document.querySelector("#inspector-host").style.zIndex = 10;
+            }
+            
+        };
+
+
+    })();
+
+
+
+
+    /**
+     * Init
+     */
+
+    (function() {
+        
+
         Game.prototype.init = async function() {
             const { CartesianAxis } = E3D;
             const _this = this;
@@ -150,9 +465,12 @@ var E3D = E3D || {};
                 if (debug) {
                     var cartesianAxis = new CartesianAxis(scene, "");    
                     cartesianAxis.update({
-                        size: WORLD_SIZE,
+                        size: Game.WORLD_SIZE,
                     });
                 }
+
+
+                this.addGameControllerInput();
 
 
                 await this.loadSounds();
@@ -161,6 +479,12 @@ var E3D = E3D || {};
 
                 await this.buildAmbient();
                 
+
+                this.initGlobalCamera();
+
+
+                // this.enableXR();
+
 
                 //##TODO
                 BABYLON.SceneLoader.OnPluginActivatedObservable.add(function(plugin) {
@@ -172,7 +496,8 @@ var E3D = E3D || {};
     
                 
                 scene.onBeforeRenderObservable.add(() => {
-                    _this.update();
+                    const deltaTime = scene.getEngine().getDeltaTime();
+                    _this.update(deltaTime);
                 });
                 
     
@@ -180,27 +505,62 @@ var E3D = E3D || {};
                 throw error;
             }
         };
-        
 
-        Game.prototype.getAnimations = function() {
-            return this.animations;
+
+        Game.prototype.enableXR = function() {
+            const { scene, debug } = this;
+
+            var vrHelper = scene.createDefaultVRExperience({createDeviceOrientationCamera: false, useXR: true});
+            // vrHelper.enableTeleportation({floorMeshes: [environment.ground]});
+
+            vrHelper.onAfterEnteringVRObservable.add(()=>{
+                if(scene.activeCamera === vrHelper.vrDeviceOrientationCamera){
+                    BABYLON.FreeCameraDeviceOrientationInput.WaitForOrientationChangeAsync(1000).then(()=>{
+                        // Successfully received sensor input
+                    }).catch(()=>{
+                        alert("Device orientation camera is being used but no sensor is found, prompt user to enable in safari settings");
+                    });
+                }
+            });
+
         };
-        Game.prototype.setAnimations = function(animations) {
-            this.animations = animations;
+
+
+        Game.prototype.initGlobalCamera = function() {
+            
+            const { globalCamera } = this;
+
+            globalCamera.setTarget(new BABYLON.Vector3(0, 0, 0));
+
+            globalCamera.minZ = 0.003;
+            globalCamera.maxZ = Game.WORLD_SIZE * 2;
+            
+            globalCamera.lowerBetaLimit = BABYLON.Tools.ToRadians(1);
+            globalCamera.upperBetaLimit = BABYLON.Tools.ToRadians(89);
+            // globalCamera.lowerAlphaLimit = BABYLON.Tools.ToRadians(0);
+            // globalCamera.upperAlphaLimit = BABYLON.Tools.ToRadians(90);
+            globalCamera.lowerRadiusLimit = 0.6;
+            globalCamera.upperRadiusLimit = Game.WORLD_SIZE/2;
+
         };
 
 
-        return Game;
-    
+        Game.prototype.addGameControllerInput = function() {
+            
+            var gameControllerInput = new GameControllerInput(this);
+            gameControllerInput.init();
+            
+        };
+
+
     })();
-    
-    
-    
+
+
+
     
     /**
      * Cameras
      */
-    
     
     (function() {
     
@@ -336,7 +696,7 @@ var E3D = E3D || {};
                     },
                     {
                         id: "cannon",
-                        path: "./assets/sounds/cannon.mp3"
+                        path: "./assets/sounds/cannon2.mp3"
                     },
                     {
                         id: "splash",
@@ -461,7 +821,9 @@ var E3D = E3D || {};
                 });
                 const [ root, sand ] = island.getChildMeshes();
                 root.dispose();
+                // ##WORK cosi dovrebbe essere sbagliato ma a livello grafico funziona
                 sand.material.albedoColor = new BABYLON.Color3(252, 221, 190);    
+                // sand.material.albedoColor = Game.SAND_COLOR;
                 
                 island.parent = ambient;
                 engine3d.showMesh(island);
@@ -509,7 +871,9 @@ var E3D = E3D || {};
                 root.dispose();
                 n0.dispose();
                 n1.dispose();
-                sand.material.albedoColor = new BABYLON.Color3(252, 221, 190);    
+                // sand.material.albedoColor = new BABYLON.Color3(252, 221, 190);  
+                sand.material.albedoColor = Game.SAND_COLOR;    
+                
                 
                 island.parent = ambient;
                 engine3d.showMesh(island);
@@ -527,7 +891,6 @@ var E3D = E3D || {};
             try {
                 
                 let island = null;
-
 
                 island = await this.loadIslandType1();
                 island.rotation.y = BABYLON.Tools.ToRadians(45);
@@ -548,18 +911,7 @@ var E3D = E3D || {};
                 island = await this.loadIslandType3();
                 island.rotation.y = BABYLON.Tools.ToRadians(90);
                 island.position = new BABYLON.Vector3(45, 0, 20);
-
-    
-                // const islandEmptyMesh = await engine3d.loadGLBGeometry({
-                //     id: "island",
-                //     filepath: "./assets/meshes/island.glb",
-                //     scale: 10,
-                // });
-                // islandEmptyMesh.position = new BABYLON.Vector3(-10, 0, -5);
-                // engine3d.showMesh(islandEmptyMesh);
-    
                 
-    
             } catch (error) {
                 throw error;
             }
@@ -630,11 +982,11 @@ var E3D = E3D || {};
                 
                 //-----------------------------------
                 // const groundMesh = BABYLON.MeshBuilder.CreateGround("ground_mesh", {
-                //     width: Game.WORLD_SIZE,
-                //     height: Game.WORLD_SIZE,
+                //     width: Game.WORLD_SIZE * 2,
+                //     height: Game.WORLD_SIZE * 2,
                 // }, this.scene);
                 // groundMesh.parent = ground;
-                // groundMesh.position = new BABYLON.Vector3(0, -SEA_HEIGHT, 0);
+                // groundMesh.position = new BABYLON.Vector3(0, -Game.SEA_HEIGHT, 0);
                 //-----------------------------------
                 // const groundMesh = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground_mesh", "./assets/textures/heightMap.png", {
                 //     width: Game.WORLD_SIZE,
@@ -645,8 +997,13 @@ var E3D = E3D || {};
                 // }, scene);
                 // groundMesh.parent = ground;
                 // groundMesh.position = new BABYLON.Vector3(0, -SEA_HEIGHT, 0);
-        
-        
+                //-----------------------------------
+                // const groundMaterial = new BABYLON.StandardMaterial("sea", scene);
+                // groundMaterial.albedoColor = Game.SAND_COLOR;    
+                // groundMaterial.alpha = 1;
+                // groundMesh.material = groundMaterial;
+                //-----------------------------------
+
                 // ##OLD
                 // groundMesh.physicsImpostor = new BABYLON.PhysicsImpostor(groundMesh, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
         
@@ -721,11 +1078,7 @@ var E3D = E3D || {};
         
                 await this.buildIslands();
         
-        
-                const camera = this.getActiveCamera();
-                camera.setTarget(new BABYLON.Vector3(0, 0, 0));
-    
-    
+                
             } catch (error) {
                 throw error;
             }
@@ -758,15 +1111,15 @@ var E3D = E3D || {};
         
 
         Game.prototype.addPlayer = async function(params = {}) {
+            const { Player } = E3D;
+            const { scene, debug, physicsViewer } = this;
             try {
-    
-                const { Player } = E3D;
-
-                const { scene, debug, physicsViewer } = this;
-    
+                
                 const position = params.position || new BABYLON.Vector3(0, 0, 0);
                 
-                const player = new Player(this);
+                const player = new Player(this, {
+                    name: params.name,
+                });
                 await player.init();
                 
                 player.setPosition(position);   
@@ -774,7 +1127,6 @@ var E3D = E3D || {};
                 this.players.push(player);
     
                 return player;
-    
                 
             } catch (error) {
                 throw error;
@@ -782,53 +1134,20 @@ var E3D = E3D || {};
         };  
 
         
-        // ##OLD
-        Game.prototype.addPlayerController__OLD = function(player) {
-            
-            const { scene } = this;
-            
-            scene.onKeyboardObservable.add((kbInfo) => {
-                switch (kbInfo.type) {
-                    case BABYLON.KeyboardEventTypes.KEYDOWN:
-                        // const { currentPlayer: player } = this;
-                    
-                        switch (kbInfo.event.key) {
-                            case "a":
-                            case "A":
-                                player.rotateRight();
-                                break;
-                            case "d":
-                            case "D":
-                                player.rotateLeft();
-                            break;
-                            case "w":
-                            case "W":
-                                player.speedUp();
-                            break;
-                            case "s":
-                            case "S":
-                                player.speedDown();
-                            break;
-                        }
-                    break;
-                }
-            });
-    
-    
-        }
         Game.prototype.addPlayerControllerInput = function(player) {
             
             const { PlayerControllerInput } = E3D;
             const { scene } = this;
             
             var playerControllerInput = new PlayerControllerInput(engine3d);
-            playerControllerInput.init();
-    
+            playerControllerInput.initKeyboardInput();
+            playerControllerInput.initVirtualJoystickInput();
+            
             player._input = playerControllerInput;
             
         }
-    
-    
+        
+        
     })();
     
 
@@ -845,25 +1164,24 @@ var E3D = E3D || {};
     (function() {
         
 
-        Game.prototype.update = function() {
+        Game.prototype.update = function(deltaTime) {
             const _this = this;
             const { game, engine3d, scene, geometry, node } = this;
 
+            _this.animations.forEach(anim => anim.update(deltaTime));
 
-            _this.animations.forEach(anim => anim.update());
-
-
+            
             _this.getPlayers().forEach(player => {
 
                 if (player.node.position.length() > Game.WORLD_SIZE/2) {
                     player.node.position = new BABYLON.Vector3(0, 0, 0);
                 }
-                player.update();
+                player.update(deltaTime);
 
-                player.cannon.update();
+                player.cannon.update(deltaTime);
 
                 player.cannon.getBalls().forEach(ball => {
-                    ball.update();
+                    ball.update(deltaTime);
                 });
 
             });
@@ -883,8 +1201,13 @@ var E3D = E3D || {};
                             color: { r: 255, g: 100, b: 50, a: 0.5 }
                         });
                         _this.animations.push(explosionAnimation);
+                        _this.playBombSound();
                         if (player.life <= 0) {
-                            player.dispose();
+                            const animationGroup = player.runDeadAnimation();
+                            animationGroup.onAnimationEndObservable.add(() => {    
+                                player.dispose();
+                            });
+                            
                         }
                     } else {
                         // player.bbMesh.material = engine3d.getBBMaterial();

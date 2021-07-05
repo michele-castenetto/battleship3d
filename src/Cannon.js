@@ -8,6 +8,132 @@ var E3D = E3D || {};
     const SHOOTING_INTERVAL = 1000;
 
 
+    // ##REF
+    // https://playground.babylonjs.com/#C21DGD#2
+
+    const CannonSmokeEmitter = (function() {
+
+        function CannonSmokeEmitter(game) {
+            const _this = this;
+
+            this.game = game;
+            this.engine3d = game.engine3d;
+            this.scene = this.engine3d.scene;
+
+            this.particleSystem = null;
+            this.emitter = null;
+        }
+
+
+        CannonSmokeEmitter.prototype.buildParticleSystem = async function(scene, emitter) {
+            try {
+                
+                var particleSystem = new BABYLON.ParticleSystem("smoke", 10000, scene);
+                
+                const radius = 0.1;
+                const angle = BABYLON.Tools.ToRadians(45);
+                
+                particleSystem.createConeEmitter(radius, angle);
+
+                //Texture of each particle
+                particleSystem.particleTexture = new BABYLON.Texture("./assets/textures/smoke.png", scene);
+                
+                particleSystem.targetStopDuration = 0.2;
+
+                particleSystem.noiseStrength = new BABYLON.Vector3(10, 10, 10);
+
+                particleSystem.emitter = emitter;
+
+                particleSystem.color1 = new BABYLON.Color4.FromInts(139, 139, 139, 255);
+                particleSystem.color2 = new BABYLON.Color4.FromInts(179, 179, 179, 255);
+                particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+                
+                particleSystem.minSize = 0.1;
+                particleSystem.maxSize = 0.1;
+                
+                particleSystem.minLifeTime = 0.05;
+                particleSystem.maxLifeTime = 0.15;
+                
+                particleSystem.emitRate = 1000;
+                
+                particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+                
+                particleSystem.gravity = BABYLON.Vector3.Zero();
+                
+                particleSystem.minAngularSpeed = 0;
+                particleSystem.maxAngularSpeed = 0;
+    
+                particleSystem.minEmitPower = 5;
+                particleSystem.maxEmitPower = 5;
+                particleSystem.updateSpeed = 0.016666666666666666;
+
+
+                particleSystem.addColorGradient(0, 
+                    BABYLON.Color4.FromInts(184, 109, 37, 255), 
+                    BABYLON.Color4.FromInts(165, 165, 67, 255)
+                );
+
+                particleSystem.addColorGradient(0.63, 
+                    BABYLON.Color4.FromInts(90, 90, 90, 255), 
+                    BABYLON.Color4.FromInts(100, 100, 100, 255)
+                );
+                    
+                particleSystem.addColorGradient(1, 
+                    BABYLON.Color4.FromInts(53, 53, 53, 255), 
+                    BABYLON.Color4.FromInts(68, 68, 68, 255)
+                );
+
+
+                particleSystem.addSizeGradient(0, 0.3, 0.4);
+                particleSystem.addSizeGradient(0.91, 0.4, 0.5);
+                particleSystem.addSizeGradient(1, 1, 1);
+                
+                return particleSystem;
+
+            } catch (error) {
+                throw error;
+            }
+        };
+
+
+
+        CannonSmokeEmitter.prototype.init = async function() {
+            const { scene } = this;
+            try {
+             
+                const emitter = new BABYLON.TransformNode("cannon_emitter", scene); 
+                this.emitter = emitter;
+    
+                const particleSystem = await this.buildParticleSystem(scene, emitter);
+                particleSystem.stop();
+                this.particleSystem = particleSystem;
+
+            } catch (error) {
+                throw error;
+            }
+        };
+
+
+        CannonSmokeEmitter.prototype.start = function() {
+            this.particleSystem.start();
+        };
+
+
+        CannonSmokeEmitter.prototype.stop = function() {
+            this.particleSystem.stop();
+        };
+
+
+
+        return CannonSmokeEmitter;
+
+    })();
+    E3D.CannonSmokeEmitter = CannonSmokeEmitter;
+
+
+
+
+
 
     const CannonBall = (function() {
 
@@ -63,6 +189,13 @@ var E3D = E3D || {};
         };
         CannonBall.prototype.setDirection = function(direction) {
             this._direction = direction;  
+        };
+
+        CannonBall.prototype.getVelocity = function() {
+            return this._velocity;  
+        };
+        CannonBall.prototype.setVelocity = function(velocity) {
+            this._velocity = velocity;  
         };
 
 
@@ -123,6 +256,7 @@ var E3D = E3D || {};
                 
                 await this.buildGeometry();
 
+                //##DEBUG
                 // this.bbMesh.isVisible = true;
 
             } catch (error) {
@@ -132,10 +266,9 @@ var E3D = E3D || {};
 
 
         CannonBall.prototype.update = function() {
-            const { ExplosionAnimation } = E3D;
+            const { ExplosionAnimation, WaveEmitter } = E3D;
             const { game, engine3d, geometry, node } = this;
 
-            
             const AIR_LIMIT = -0.1;
             const DISPOSE_LIMIT = -2;
 
@@ -152,12 +285,20 @@ var E3D = E3D || {};
                 if (!this.inWater) {
                     game.playSplashSound();
                     velocityVector.scaleInPlace(0.05);
+
                     const explosionAnimation = new ExplosionAnimation(game);
                     explosionAnimation.init({
                         position: node.position.clone(),
-                        color: { r: 47, g: 112, b: 150, a: 0.8 }
+                        // color: { r: 47, g: 112, b: 150, a: 0.8 }
+                        color: { r: 255, g: 255, b: 255, a: 0.5 }
                     });
                     game.animations.push(explosionAnimation);
+
+                    // const waveEmitter = new WaveEmitter(game);
+                    // waveEmitter.init();
+                    // waveEmitter.emitter.position = node.position.clone();
+                    // waveEmitter.start();
+
                 }
                 this.inWater = true;
             }
@@ -177,10 +318,9 @@ var E3D = E3D || {};
         return CannonBall;
 
     })();
-
-
-
     E3D.CannonBall = CannonBall;
+
+
 
 
 
@@ -208,6 +348,8 @@ var E3D = E3D || {};
             this.isShooting = false;
 
             this._balls = [];
+
+            this.cannonSmokeEmitter = null;
 
         }
 
@@ -260,6 +402,24 @@ var E3D = E3D || {};
         };
 
 
+        Cannon.prototype.addCannonSmokeEmitter = async function() {
+            const { game, engine3d, scene, node } = this;
+            try {
+                
+                const cannonSmokeEmitter = new CannonSmokeEmitter(game);
+                await cannonSmokeEmitter.init();
+                cannonSmokeEmitter.emitter.parent = node;
+                cannonSmokeEmitter.emitter.position = new BABYLON.Vector3(0.4, 0.25, 0);
+                cannonSmokeEmitter.emitter.rotation.z = BABYLON.Tools.ToRadians(-75);
+                cannonSmokeEmitter.emitter.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+                this.cannonSmokeEmitter = cannonSmokeEmitter;
+                
+            } catch (error) {
+                throw error;
+            }
+        };
+
+
         Cannon.prototype.init = async function() {
             const { game, engine3d, node } = this;
             try {
@@ -272,6 +432,8 @@ var E3D = E3D || {};
 
                 await this.buildGeometry();
 
+                await this.addCannonSmokeEmitter();
+
             } catch (error) {
                 throw error;
             }
@@ -283,7 +445,7 @@ var E3D = E3D || {};
         };
 
 
-        Cannon.prototype.shoot = async function() {
+        Cannon.prototype.shoot = async function(velocity) {
             try {
 
                 const { game, engine3d, node } = this;
@@ -295,7 +457,9 @@ var E3D = E3D || {};
                 this.isShooting = true;
     
                 game.playCannonSound();
-    
+                
+                this.cannonSmokeEmitter.start();
+
                 setTimeout(function() {
                     _this.isShooting = false;
                 }, SHOOTING_INTERVAL);
@@ -304,7 +468,7 @@ var E3D = E3D || {};
                 await ball.init();
                 const ballPosition = this.getPosition().clone();
                 
-                var angle = 33;
+                var angle = 23;
                 var height = Math.tan(BABYLON.Tools.ToRadians(angle));
                 let ballDirection = this.getDirection().clone();
                 ballDirection.addInPlace(new BABYLON.Vector3(0, height, 0 ));
@@ -312,15 +476,15 @@ var E3D = E3D || {};
                 // console.log("ballDirection", ballDirection);
                 
                 ballPosition.addInPlace(ballDirection.scale(0.38));
+                ballPosition.addInPlace(new BABYLON.Vector3(0, 0.07, 0 ));
+                
+                let ballVelocity = 0.007 * velocity;
 
                 ball.setPosition(ballPosition);
                 ball.setDirection(ballDirection);
-
-                // ##WORK set ball velocity on long press button
-                // ball._velocity 
-
-                this._balls.push(ball);
+                ball.setVelocity(ballVelocity);
                 
+                this._balls.push(ball);
 
             } catch (error) {
                 throw error;
