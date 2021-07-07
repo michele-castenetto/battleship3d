@@ -20,23 +20,38 @@
         var player1 = await game.addPlayer({
             name: "player1"
         });
-        player1.setColor({r: 240, g: 50});
+        player1.setColor({r: 240, g: 50});  
 
-
-        var player2 = await game.addPlayer({
-            name: "player2",
-            position: new BABYLON.Vector3(3, 0, 0)
-        });
-        player2.setColor({g: 255, r: 100});
-        
-        
         game.setCurrentPlayer(player1);
-
         game.addPlayerControllerInput(player1);
 
+        
+        game.setActiveCamera(player1.playerCamera);
 
 
-        // game.setActiveCamera(player1.playerCamera);
+
+        //##TEST
+        // var enermy1 = await game.addPlayer({
+        //     name: "enermy1",
+        //     position: new BABYLON.Vector3(3, 0, 0)
+        // });
+        // // enermy1.setColor({g: 255, r: 100});
+        // enermy1.setColor({g: 50, b: 255});
+
+
+        
+        game.addEnermies({
+            num: 2
+        });
+
+
+
+
+        
+
+        
+        
+        
 
 
 

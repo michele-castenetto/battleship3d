@@ -25,6 +25,12 @@ var E3D = E3D || {};
         }
 
 
+        CannonSmokeEmitter.prototype.dispose = function() {
+            this.particleSystem.dispose();
+            this.emitter.dispose();
+        };
+
+
         CannonSmokeEmitter.prototype.buildParticleSystem = async function(scene, emitter) {
             try {
                 
@@ -180,7 +186,7 @@ var E3D = E3D || {};
             return this.node.getAbsolutePosition();  
         };
         CannonBall.prototype.setPosition = function(position) {
-            this.node.position = position;  
+            this.node.position = position;
         };
 
 
@@ -354,6 +360,16 @@ var E3D = E3D || {};
         }
 
 
+        Cannon.prototype.dispose = function() {
+            this.node.dispose();
+            this.cannonSmokeEmitter.dispose();
+            this.getBalls().forEach(ball => {
+                ball.dispose();
+            });
+        };
+
+
+
         Cannon.prototype.getPosition = function() {
             return this.node.getAbsolutePosition();  
         };
@@ -466,6 +482,7 @@ var E3D = E3D || {};
     
                 const ball = new CannonBall(game, this);
                 await ball.init();
+
                 const ballPosition = this.getPosition().clone();
                 
                 var angle = 23;

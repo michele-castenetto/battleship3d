@@ -2,6 +2,71 @@ var E3D = E3D || {};
 (function (E3D) {
 
 
+    
+    const PlayerAI = (function() {
+
+        var _getRandom = function(a, b) {
+            return Math.floor(a + Math.random() * (b - a));
+        };
+
+        var _getChance = function(rate) {
+            return Math.random() < rate;
+        };
+
+        function PlayerAI() {
+            this.player = null;
+            this.timer = null;
+            this.noActionCounter = 0;
+        }
+
+        PlayerAI.prototype.init = function(player) {
+            const { Tools } = E3D;
+            const { Timer } = Tools;
+
+            this.player = player;
+            player.ai = this;
+            const timer = new Timer();
+            this.timer = timer;
+            timer.interval = 200;
+            timer.onElapsed = this.onElapsed.bind(this);
+
+            this.player.setSailing(_getRandom(10, 30));
+            
+        };
+
+        PlayerAI.prototype.start = function() {
+            this.timer.start();
+        };
+
+        PlayerAI.prototype.stop = function() {
+            this.timer.stop();
+        };
+
+
+
+        PlayerAI.prototype.onElapsed = function() {
+            const { player } = this;
+            
+            if (_getChance(0.02)) {
+                if (_getChance(0.5)) {
+                    player.rotateDirection(_getRandom(60, 90));
+                } else {
+                    player.rotateDirection(_getRandom(-60, -90));
+                }
+            }
+
+            if (_getChance(0.05)) {
+                player.shoot(_getRandom(10, 30));    
+            }
+
+        };
+
+        return PlayerAI;
+
+    })();
+    E3D.PlayerAI = PlayerAI;
+
+
 
     const PlayerControllerInput = (function() {
             
@@ -402,6 +467,12 @@ var E3D = E3D || {};
         }
 
 
+        WakeEmitter.prototype.dispose = function() {
+            this.particleSystem.dispose();
+            this.emitter.dispose();
+        };
+
+
         WakeEmitter.prototype.buildParticleSystem = function(scene, emitter) {
           
             // Create a particle system
@@ -540,12 +611,6 @@ var E3D = E3D || {};
 
             this.size = null;
 
-            // ##OLD
-            this.boundingInfo = null;
-            node.getBoundingInfo = function () {
-                return _this.boundingInfo;
-            };
-
             const geometry = new BABYLON.TransformNode("geometry", this.scene);
             geometry.parent = node;
             this.geometry = geometry;
@@ -575,12 +640,17 @@ var E3D = E3D || {};
             // children  class
             this.cannon = null;
             this.lifeBar = null;
+            this.shootBar = null;
             this.wakeEmitter = null;
 
             // shoot
 
             this.inShootingState = false;
             this.shootStartTime = null;
+
+            // AI
+
+            this.ai = null;
 
         }
 
@@ -594,6 +664,13 @@ var E3D = E3D || {};
             const _this = this;
             const { game } = this;
             this.node.dispose();
+            this.lifeBar.dispose();
+            this.shootBar.dispose();
+            this.wakeEmitter.dispose();
+            this.cannon.dispose();
+            if (this.ai) {
+                this.ai.stop();
+            }
             game.setPlayers(game.getPlayers().filter(player => player !== _this));
         };
 
@@ -755,13 +832,17 @@ var E3D = E3D || {};
         };
 
 
-        //##OLD
         Player.prototype.addPhysics = function () {
-
+            const _this = this;
             const { game, engine3d, scene, geometry, node } = this;
             const { physicsViewer } = game;
 
-            const physicsImpostor = new BABYLON.PhysicsImpostor(node, BABYLON.PhysicsImpostor.BoxImpostor, {
+            // Necessario questo metodo per generare il physic impostor
+            node.getBoundingInfo = function () {
+                return _this.bbMesh.getBoundingInfo();
+            };
+
+            const physicsImpostor = new BABYLON.PhysicsImpostor(_this.bbMesh, BABYLON.PhysicsImpostor.BoxImpostor, {
                 mass: 10,
                 restitution: 0.9,
             }, scene);
@@ -1161,58 +1242,15 @@ var E3D = E3D || {};
         };
 
 
-
-        // ##OLD
-        Player.prototype.speedUp = function () {
-            const { game, engine3d, scene, geometry, node, sailing } = this;
-            this.speed += 0.01;
-            if (this.speed >= 0.02) {
-                this.speed = 0.02;
-            }
-
-            if (this.speed === 0) {
-                sailing.setEnabled(true);
-                sailing.rotationQuaternion = BABYLON.Quaternion.Identity();
-                sailing.rotate(BABYLON.Axis.Y, BABYLON.Tools.ToRadians(20), BABYLON.Space.LOCAL);
-            }
-            if (this.speed === 0.01) {
-                sailing.setEnabled(true);
-                sailing.rotationQuaternion = BABYLON.Quaternion.Identity();
-                sailing.rotate(BABYLON.Axis.Y, BABYLON.Tools.ToRadians(50), BABYLON.Space.LOCAL);
-            }
-            if (this.speed === 0.02) {
-                sailing.setEnabled(true);
-                sailing.rotationQuaternion = BABYLON.Quaternion.Identity();
-                sailing.rotate(BABYLON.Axis.Y, BABYLON.Tools.ToRadians(80), BABYLON.Space.LOCAL);
-            }
-
-        };
-        Player.prototype.speedDown = function () {
-            const { game, engine3d, scene, geometry, node, sailing } = this;
-            this.speed -= 0.01;
-            if (this.speed <= 0) {
-                this.speed = 0;
-            }
-
-            if (this.speed === 0) {
-                sailing.setEnabled(true);
-                sailing.rotationQuaternion = BABYLON.Quaternion.Identity();
-                sailing.rotate(BABYLON.Axis.Y, BABYLON.Tools.ToRadians(20), BABYLON.Space.LOCAL);
-            }
-            if (this.speed === 0.01) {
-                sailing.setEnabled(true);
-                sailing.rotationQuaternion = BABYLON.Quaternion.Identity();
-                sailing.rotate(BABYLON.Axis.Y, BABYLON.Tools.ToRadians(50), BABYLON.Space.LOCAL);
-            }
-            if (this.speed === 0.02) {
-                sailing.setEnabled(true);
-                sailing.rotationQuaternion = BABYLON.Quaternion.Identity();
-                sailing.rotate(BABYLON.Axis.Y, BABYLON.Tools.ToRadians(80), BABYLON.Space.LOCAL);
-            }
-
+        Player.prototype.kill = function() {
+            const _this = this;
+            const animationGroup = this.runDeadAnimation();
+            animationGroup.onAnimationEndObservable.add(() => {    
+                _this.dispose();
+            });
         };
 
-
+        
     })();
 
 

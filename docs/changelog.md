@@ -1,6 +1,13 @@
 # Changelog
 
 
+## 07-07-2021
+- PlayerAI: class for simple enermies AI 
+- Player: kill method
+- Game: addPlayerAI, addEnermy and addEnermies methods
+- Game: isTouchDevice method
+- Tools: class for helpers classes and methods
+
 ## 05-07-2021
 - CannonSmokeEmitter: class for smoke shoot animation
 - GameControllerInput: class for game controls 

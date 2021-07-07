@@ -614,12 +614,16 @@ var E3D = E3D || {};
             
     
             scene.onBeforeRenderObservable.add(() => {
-                _this.players.forEach(function(player) {
-                    player.node.position.y = 0;
-                    if (!player.physicsImpostor) {
-                        return;
-                    }
+                _this.players.forEach((player) => {
+                    
+                    // player.node.position.y = 0;
+                    
+                    // if (!player.physicsImpostor) {
+                    //     return;
+                    // }
+
                     // _this.applyForceToCenter(player.physicsImpostor, gravity.scale(player.physicsImpostor.mass));
+
                 });
             });
     
@@ -1122,7 +1126,7 @@ var E3D = E3D || {};
                 });
                 await player.init();
                 
-                player.setPosition(position);   
+                player.setPosition(position);
     
                 this.players.push(player);
     
@@ -1133,21 +1137,89 @@ var E3D = E3D || {};
             }
         };  
 
+
+        Game.prototype.addEnermy = async function(params = {}) {
+            const { Player } = E3D;
+            const { scene, debug, physicsViewer } = this;
+            try {
+                
+                const position = params.position || new BABYLON.Vector3(0, 0, 0);
+                const name = params.name || "enermy";
+
+                var enermy = await this.addPlayer({
+                    name: name,
+                });
+                enermy.setPosition(position);
+                enermy.setColor({g: 50, b: 255});
+                this.addPlayerAI(enermy);
+
+                return enermy;
+
+            } catch (error) {
+                throw error;
+            }
+        }; 
+        Game.prototype.addEnermies = async function(params = {}) {
+            const { Player } = E3D;
+            const { scene, debug, physicsViewer } = this;
+            try {
+                
+                const num = params.num || 2;
+
+                let x = 0;
+                let z = 0;
+                for (let i = 0; i < num; i++) {
+                    x = Math.sign((Math.random() - 0.5)) * (5 + Math.random() * 5);
+                    z = Math.sign((Math.random() - 0.5)) * (5 + Math.random() * 5);
+                    this.addEnermy({
+                        name: "enermy" + i,
+                        position: new BABYLON.Vector3(x, 0, z),
+                    });                    
+                }
+                
+            } catch (error) {
+                throw error;
+            }
+        }; 
+
+
+
+
+        Game.prototype.isTouchDevice = function() {
+            return window.ontouchstart !== undefined;
+        }
+
         
         Game.prototype.addPlayerControllerInput = function(player) {
             
             const { PlayerControllerInput } = E3D;
-            const { scene } = this;
+            const { scene, debug } = this;
             
             var playerControllerInput = new PlayerControllerInput(engine3d);
             playerControllerInput.initKeyboardInput();
-            playerControllerInput.initVirtualJoystickInput();
+
+            if(this.isTouchDevice()) {
+                playerControllerInput.initVirtualJoystickInput();
+            }
             
             player._input = playerControllerInput;
             
         }
-        
-        
+
+
+        Game.prototype.addPlayerAI = function(player) {
+            
+            const { PlayerAI } = E3D;
+            const { scene, debug } = this;
+            
+            const playerAI = new PlayerAI();
+            playerAI.init(player);
+
+            playerAI.start();
+
+        }
+
+
     })();
     
 
@@ -1188,8 +1260,11 @@ var E3D = E3D || {};
     
             
             _this.getPlayers().forEach(player => {
-
                 _this.getOtherPlayersCannonBalls(player).forEach(ball => {
+
+                    player.bbMesh.computeWorldMatrix(true);
+                    ball.bbMesh.computeWorldMatrix(true);
+
                     const intersection = player.bbMesh.intersectsMesh(ball.bbMesh, true);
                     if(intersection) {
                         // player.bbMesh.material = engine3d.getEmissiveMaterialRGB({g:255, a: 0.2});
@@ -1203,11 +1278,7 @@ var E3D = E3D || {};
                         _this.animations.push(explosionAnimation);
                         _this.playBombSound();
                         if (player.life <= 0) {
-                            const animationGroup = player.runDeadAnimation();
-                            animationGroup.onAnimationEndObservable.add(() => {    
-                                player.dispose();
-                            });
-                            
+                            player.kill();
                         }
                     } else {
                         // player.bbMesh.material = engine3d.getBBMaterial();

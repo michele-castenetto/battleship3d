@@ -22,10 +22,17 @@
 
 - creare animazione di affondamento [x]
 
+- aggiungere semplice AI agli avversari [x]
 
 
 
 
+
+
+
+- migliorare animazione splash [ ]
+
+- migliorare animazione explosione [ ]
 
 
 
@@ -33,14 +40,9 @@
 
 
 
-
-
-
-- pulire codice che non serve piu [ ]
-
 - utilizzo di engine di simulazione fisica per gestire gli urti ? [ ]
 
-- aggiungere semplice AI agli avversari ? [ ]
+
 
 
 
@@ -58,7 +60,7 @@
 
 - miglioramenti a materiali barca e cannone ? [ ]
 
-- migliorare animazioni explosioni [ ]
+
 
 - parte inferiore dell'oceano [ ]
 
