@@ -373,6 +373,8 @@ var E3D = E3D || {};
             this.currentPlayer = null;
     
             this.globalCamera = this.scene.activeCamera;
+
+            this.vrHelper = null;
             
         };
 
@@ -483,9 +485,6 @@ var E3D = E3D || {};
                 this.initGlobalCamera();
 
 
-                // this.enableXR();
-
-
                 //##TODO
                 BABYLON.SceneLoader.OnPluginActivatedObservable.add(function(plugin) {
                     if (plugin.name === "gltf" && plugin instanceof BABYLON.GLTFFileLoader) {
@@ -507,22 +506,115 @@ var E3D = E3D || {};
         };
 
 
-        Game.prototype.enableXR = function() {
+        Game.prototype.enableXR = async function(player) {
             const { scene, debug } = this;
+            try {
+                
 
-            var vrHelper = scene.createDefaultVRExperience({createDeviceOrientationCamera: false, useXR: true});
-            // vrHelper.enableTeleportation({floorMeshes: [environment.ground]});
+                const vrHelper = await scene.createDefaultXRExperienceAsync({
+                    floorMeshes: null,
+                    disableTeleportation: true,
+                });
+                console.log("vrHelper", vrHelper);
+                
+    
+                this.vrHelper = vrHelper;
+                
 
-            vrHelper.onAfterEnteringVRObservable.add(()=>{
-                if(scene.activeCamera === vrHelper.vrDeviceOrientationCamera){
-                    BABYLON.FreeCameraDeviceOrientationInput.WaitForOrientationChangeAsync(1000).then(()=>{
-                        // Successfully received sensor input
-                    }).catch(()=>{
-                        alert("Device orientation camera is being used but no sensor is found, prompt user to enable in safari settings");
+                const webXRInput = vrHelper.input; // if using the experience helper, otherwise, an instance of WebXRInput
+                // webXRInput is a WebXRInput instance
+                webXRInput.onControllerAddedObservable.add( xrController => {
+                    // xrController is aWebXRInputSource instance 
+
+                    // console.log("xrController", xrController);
+                    // console.log("xrController.inputSource", xrController.inputSource);
+                    // console.log("xrController.inputSource.onMotionControllerInitObservable", xrController.inputSource.onMotionControllerInitObservable);
+                    // console.log("xrController.motionController", xrController.motionController);
+
+
+                    xrController.onMotionControllerInitObservable.add(motionController => {
+                        console.log("motionController", motionController);
+
+                        const mainComponent = motionController.getMainComponent();
+                        console.log("mainComponent", mainComponent);
+
+                        mainComponent.onAxisValueChangedObservable.add(event => {
+                            console.log("event", event);
+                        });
+                        mainComponent.onButtonStateChangedObservable.add(event => {
+                            console.log("event", event);
+                        });
+
+                        const buttonComponents = motionController.getAllComponentsOfType("button");
+                        console.log("buttonComponents", buttonComponents);
+                        buttonComponents[0].onButtonStateChangedObservable.add(event => {
+                            console.log("event", event);
+                        });
+
+                        
+                        // const thumbstick = motionController.getComponent(BABYLON.WebXRControllerComponent.THUMBSTICK);
+                        // console.log("thumbstick", thumbstick);
+                        // if (thumbstick) {
+                        //     // Huzza! we have a thumbstick:
+                        //     thumbstick.onButtonStateChanged.add(() => {
+                        //         console.log("press");
+                        //     });
+                        //     thumbstick.onAxisValueChanged.add(() => {
+                        //         console.log("move");
+                        //     });
+                        // }
+
                     });
-                }
-            });
+                    
+                });
 
+
+                // --------------------------------------------------------------------------------------------------
+                return;
+                // --------------------------------------------------------------------------------------------------
+                // Using WebXRExperienceHelper
+
+                let xrHelper= null;
+                try {
+                    xrHelper = await BABYLON.WebXRExperienceHelper.CreateAsync(scene);
+                } catch (error) {
+                    console.log("error", error);
+                    console.log("no XR support");
+                    return;
+                }
+
+                // console.log("xrHelper", xrHelper);
+                // console.log("xrHelper.camera", xrHelper.camera);
+                // console.log("xrHelper.sessionManager", xrHelper.sessionManager);
+                // console.log("xrHelper.featuresManager", xrHelper.featuresManager);
+                
+                
+
+                
+                const sessionManager = await xrHelper.enterXRAsync("immersive-vr", "local-floor" /*, optionalRenderTarget */ );
+                console.log("sessionManager", sessionManager);
+                await sessionManager.setReferenceSpaceTypeAsync("local");
+
+
+                const xrCamera = xrHelper.camera;
+                // xrCamera.parent = player.node;
+                // xrCamera.position = new BABYLON.Vector3(0, 0.3, 0);
+
+                sessionManager.onXRFrameObservable.add(()=>{
+                    xrCamera.position.copyFrom(player.node.getAbsolutePosition().add(new BABYLON.Vector3(0, 0.3, 0)));
+                });
+
+                console.log("xrHelper", xrHelper);
+
+                console.log("xrHelper.sessionManager.session.inputSources", xrHelper.sessionManager.session.inputSources);
+
+
+                // await xrHelper.exitXRAsync();
+
+
+            } catch (error) {
+                throw error;
+            }
         };
 
 
@@ -1198,6 +1290,8 @@ var E3D = E3D || {};
             var playerControllerInput = new PlayerControllerInput(engine3d);
             playerControllerInput.initKeyboardInput();
 
+            
+            // playerControllerInput.initVirtualJoystickInput();
             if(this.isTouchDevice()) {
                 playerControllerInput.initVirtualJoystickInput();
             }

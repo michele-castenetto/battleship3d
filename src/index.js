@@ -46,7 +46,7 @@
 
 
 
-
+        // game.enableXR(player1);
         
 
         

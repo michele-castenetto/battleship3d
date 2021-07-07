@@ -1,6 +1,10 @@
 # Changelog
 
 
+## 08-07-2021
+- readme.md with project decription
+- Game.enableXR: changes for setting correct camera position and use the controller inputs (not working)
+
 ## 07-07-2021
 - PlayerAI: class for simple enermies AI 
 - Player: kill method
